@@ -1,0 +1,364 @@
+Index: device/qcom/X596/system.prop
+===================================================================
+--- device/qcom/X596/system.prop	(revision 10775)
++++ device/qcom/X596/system.prop	(working copy)
+@@ -182,3 +182,8 @@
+ 
+ #Set PDAF foucs box be hiden
+ persist.camera.stats.test=5
++
++#charlesvincent Disable_HWUI_GPU_HWC
++persist.sys.force_sw_gles=1
++debug.gralloc.enable_fb_ubwc=0
++debug.gralloc.gfx_ubwc_disable=1
+Index: device/qcom/common/base.mk
+===================================================================
+--- device/qcom/common/base.mk	(revision 10775)
++++ device/qcom/common/base.mk	(working copy)
+@@ -744,7 +744,9 @@
+     FMRecord \
+     VideoEditor \
+     SnapdragonGallery \
+-    SnapdragonMusic
++    SnapdragonMusic \
++	test-vsync-events \
++	SurfaceFlinger_test \
+ 
+ ifneq ($(TARGET_USES_AOSP),true)
+ PRODUCT_PACKAGES += \
+Index: frameworks/base/core/java/android/view/DisplayListCanvas.java
+===================================================================
+--- frameworks/base/core/java/android/view/DisplayListCanvas.java	(revision 10775)
++++ frameworks/base/core/java/android/view/DisplayListCanvas.java	(working copy)
+@@ -80,9 +80,10 @@
+ 
+     private static native boolean nIsAvailable();
+     private static boolean sIsAvailable = nIsAvailable();
+-
++	//charlesvincent Disable_HWUI_GPU_HWC
+     static boolean isAvailable() {
+-        return sIsAvailable;
++        //return sIsAvailable;
++        return false;
+     }
+ 
+     ///////////////////////////////////////////////////////////////////////////
+Index: frameworks/base/core/java/android/view/ThreadedRenderer.java
+===================================================================
+--- frameworks/base/core/java/android/view/ThreadedRenderer.java	(revision 10775)
++++ frameworks/base/core/java/android/view/ThreadedRenderer.java	(working copy)
+@@ -197,14 +197,18 @@
+      *
+      * @hide
+      */
+-    public static boolean sRendererDisabled = false;
++    //public static boolean sRendererDisabled = false;
++    //charlesvincent Disable_HWUI_GPU_HWC
++    public static boolean sRendererDisabled = true;
+ 
+     /**
+      * Further hardware renderer disabling for the system process.
+      *
+      * @hide
+      */
+-    public static boolean sSystemRendererDisabled = false;
++    //public static boolean sSystemRendererDisabled = false;
++    //charlesvincent Disable_HWUI_GPU_HWC
++	public static boolean sSystemRendererDisabled = true;
+ 
+     /**
+      * Invoke this method to disable hardware rendering in the current process.
+@@ -238,7 +242,9 @@
+      *         false otherwise
+      */
+     public static boolean isAvailable() {
+-        return DisplayListCanvas.isAvailable();
++        //charlesvincent Disable_HWUI_GPU_HWC
++        //return DisplayListCanvas.isAvailable();
++        return false;
+     }
+ 
+     /**
+@@ -343,8 +349,10 @@
+     private Choreographer mChoreographer;
+     private boolean mRootNodeNeedsUpdate;
+ 
+-    private boolean mEnabled;
+-    private boolean mRequested = true;
++    private boolean mEnabled = false;
++	//charlesvincent Disable_HWUI_GPU_HWC
++    //private boolean mRequested = true;
++    private boolean mRequested = false;
+ 
+     ThreadedRenderer(Context context, boolean translucent) {
+         final TypedArray a = context.obtainStyledAttributes(null, R.styleable.Lighting, 0, 0);
+@@ -381,7 +389,9 @@
+      * @return True if hardware acceleration is in use, false otherwise.
+      */
+     boolean isEnabled() {
+-        return mEnabled;
++        //charlesvincent Disable_HWUI_GPU_HWC
++        //return mEnabled;
++        return false;
+     }
+ 
+     /**
+@@ -390,7 +400,9 @@
+      * @param enabled True if the hardware renderer is in use, false otherwise.
+      */
+     void setEnabled(boolean enabled) {
+-        mEnabled = enabled;
++        //charlesvincent Disable_HWUI_GPU_HWC
++        //mEnabled = enabled;
++        mEnabled = false;
+     }
+ 
+     /**
+@@ -410,7 +422,9 @@
+      * @return True to request hardware acceleration, false otherwise.
+      */
+     void setRequested(boolean requested) {
+-        mRequested = requested;
++        //charlesvincent Disable_HWUI_GPU_HWC
++        //mRequested = requested;
++        mRequested = false;
+     }
+ 
+     private void updateEnabledState(Surface surface) {
+Index: frameworks/base/core/java/android/view/ViewRootImpl.java
+===================================================================
+--- frameworks/base/core/java/android/view/ViewRootImpl.java	(revision 10775)
++++ frameworks/base/core/java/android/view/ViewRootImpl.java	(working copy)
+@@ -2807,7 +2807,9 @@
+                 // Before we request a new frame we must however attempt to reinitiliaze the
+                 // hardware renderer if it's in requested state. This would happen after an
+                 // eglTerminate() for instance.
+-                if (mAttachInfo.mHardwareRenderer != null &&
++
++                //charlesvincent Disable_HWUI_GPU_HWC
++				/*if (mAttachInfo.mHardwareRenderer != null &&
+                         !mAttachInfo.mHardwareRenderer.isEnabled() &&
+                         mAttachInfo.mHardwareRenderer.isRequested()) {
+ 
+@@ -2822,7 +2824,7 @@
+                     mFullRedrawNeeded = true;
+                     scheduleTraversals();
+                     return;
+-                }
++                }*/
+ 
+                 if (!drawSoftware(surface, mAttachInfo, xOffset, yOffset, scalingRequired, dirty)) {
+                     return;
+Index: frameworks/base/core/jni/android_view_DisplayListCanvas.cpp
+===================================================================
+--- frameworks/base/core/jni/android_view_DisplayListCanvas.cpp	(revision 10775)
++++ frameworks/base/core/jni/android_view_DisplayListCanvas.cpp	(working copy)
+@@ -217,7 +217,9 @@
+     // In the emulator this property will be set > 0 when OpenGL ES 2.0 is
+     // enabled, 0 otherwise. On old emulator versions it will be undefined.
+     property_get("qemu.gles", prop, "0");
+-    return atoi(prop) > 0 ? JNI_TRUE : JNI_FALSE;
++	//charlesvincent Disable_HWUI_GPU_HWC
++    //return atoi(prop) > 0 ? JNI_TRUE : JNI_FALSE;
++    return JNI_FALSE;
+ }
+ 
+ // ----------------------------------------------------------------------------
+Index: frameworks/native/services/surfaceflinger/Android.mk
+===================================================================
+--- frameworks/native/services/surfaceflinger/Android.mk	(revision 10775)
++++ frameworks/native/services/surfaceflinger/Android.mk	(working copy)
+@@ -152,6 +152,7 @@
+     libpowermanager \
+     libvulkan
+ 
++#LOCAL_CFLAGS += -DQTI_BSP
+ ifeq ($(TARGET_USES_QCOM_BSP), true)
+   ifeq ($(TARGET_SUPPORTS_WEARABLES),true)
+     LOCAL_C_INCLUDES += $(BOARD_DISPLAY_HAL)/libgralloc
+@@ -161,7 +162,7 @@
+   endif
+     LOCAL_SHARED_LIBRARIES += libqdutils
+     LOCAL_SHARED_LIBRARIES += libqdMetaData
+-    LOCAL_CFLAGS += -DQTI_BSP
++
+   ifeq ($(call is-board-platform-in-list, msm8996), true)
+     LOCAL_CFLAGS += -DUSE_COLOR_METADATA
+   endif
+Index: frameworks/native/services/surfaceflinger/SurfaceFlinger.cpp
+===================================================================
+--- frameworks/native/services/surfaceflinger/SurfaceFlinger.cpp	(revision 10775)
++++ frameworks/native/services/surfaceflinger/SurfaceFlinger.cpp	(working copy)
+@@ -125,6 +125,7 @@
+ const String16 sDump("android.permission.DUMP");
+ 
+ // ---------------------------------------------------------------------------
++//charlesvincent Disable_HWUI_GPU_HWC
+ 
+ SurfaceFlinger::SurfaceFlinger()
+     :   BnSurfaceComposer(),
+@@ -141,7 +142,7 @@
+         mAnimCompositionPending(false),
+         mDebugRegion(0),
+         mDebugDDMS(0),
+-        mDebugDisableHWC(0),
++        mDebugDisableHWC(1),
+         mDebugDisableTransformHint(0),
+         mDebugInSwapBuffers(0),
+         mLastSwapBufferTime(0),
+@@ -3212,7 +3213,9 @@
+             }
+             case 1008:  // toggle use of hw composer
+                 n = data.readInt32();
+-                mDebugDisableHWC = n ? 1 : 0;
++                //mDebugDisableHWC = n ? 1 : 0;
++			    //charlesvincent Disable_HWUI_GPU_HWC
++			    mDebugDisableHWC = 1;
+                 invalidateHwcGeometry();
+                 repaintEverything();
+                 return NO_ERROR;
+Index: frameworks/native/services/surfaceflinger/SurfaceFlinger_hwc1.cpp
+===================================================================
+--- frameworks/native/services/surfaceflinger/SurfaceFlinger_hwc1.cpp	(revision 10775)
++++ frameworks/native/services/surfaceflinger/SurfaceFlinger_hwc1.cpp	(working copy)
+@@ -135,6 +135,7 @@
+ const String16 sDump("android.permission.DUMP");
+ 
+ // ---------------------------------------------------------------------------
++//charlesvincent Disable_HWUI_GPU_HWC
+ 
+ SurfaceFlinger::SurfaceFlinger()
+     :   BnSurfaceComposer(),
+@@ -146,11 +147,11 @@
+         mRenderEngine(NULL),
+         mBootTime(systemTime()),
+         mVisibleRegionsDirty(false),
+-        mHwWorkListDirty(false),
++        mHwWorkListDirty(true),
+         mAnimCompositionPending(false),
+         mDebugRegion(0),
+         mDebugDDMS(0),
+-        mDebugDisableHWC(0),
++        mDebugDisableHWC(1),
+         mDebugDisableTransformHint(0),
+         mDebugInSwapBuffers(0),
+         mLastSwapBufferTime(0),
+@@ -3213,7 +3214,9 @@
+             }
+             case 1008:  // toggle use of hw composer
+                 n = data.readInt32();
+-                mDebugDisableHWC = n ? 1 : 0;
++                //mDebugDisableHWC = n ? 1 : 0;
++			    //charlesvincent Disable_HWUI_GPU_HWC
++			    mDebugDisableHWC = 1;
+                 invalidateHwcGeometry();
+                 repaintEverything();
+                 return NO_ERROR;
+Index: frameworks/native/services/surfaceflinger/tests/Transaction_test.cpp
+===================================================================
+--- frameworks/native/services/surfaceflinger/tests/Transaction_test.cpp	(revision 10775)
++++ frameworks/native/services/surfaceflinger/tests/Transaction_test.cpp	(working copy)
+@@ -123,7 +123,7 @@
+ 
+         // Foreground surface
+         mFGSurfaceControl = mComposerClient->createSurface(
+-                String8("FG Test Surface"), 64, 64, PIXEL_FORMAT_RGBA_8888, 0);
++                String8("FG Test Surface"), 592, 592, PIXEL_FORMAT_RGBA_8888, 0);
+         ASSERT_TRUE(mFGSurfaceControl != NULL);
+         ASSERT_TRUE(mFGSurfaceControl->isValid());
+ 
+@@ -229,7 +229,7 @@
+ 
+     ALOGD("resizing");
+     SurfaceComposerClient::openGlobalTransaction();
+-    ASSERT_EQ(NO_ERROR, mFGSurfaceControl->setSize(128, 128));
++    ASSERT_EQ(NO_ERROR, mFGSurfaceControl->setSize(480, 480));
+     SurfaceComposerClient::closeGlobalTransaction(true);
+     ALOGD("resized");
+     {
+@@ -292,7 +292,7 @@
+         sc->checkPixel(145, 145,  63,  63, 195);
+     }
+     SurfaceComposerClient::openGlobalTransaction();
+-    Rect cropRect(16, 16, 32, 32);
++    Rect cropRect(160, 160, 320, 320);
+     ASSERT_EQ(NO_ERROR, mFGSurfaceControl->setFinalCrop(cropRect));
+     SurfaceComposerClient::closeGlobalTransaction(true);
+     {
+@@ -376,7 +376,7 @@
+     }
+ 
+     SurfaceComposerClient::openGlobalTransaction();
+-    ASSERT_EQ(NO_ERROR, mFGSurfaceControl->setAlpha(0.75f));
++    ASSERT_EQ(NO_ERROR, mFGSurfaceControl->setAlpha(0.5f));
+     SurfaceComposerClient::closeGlobalTransaction(true);
+     {
+         // This should set foreground to be 75% opaque.
+@@ -448,8 +448,8 @@
+     }
+ 
+     SurfaceComposerClient::openGlobalTransaction();
+-    ASSERT_EQ(NO_ERROR, mFGSurfaceControl->setMatrix(M_SQRT1_2, M_SQRT1_2,
+-            -M_SQRT1_2, M_SQRT1_2));
++    ASSERT_EQ(NO_ERROR, mFGSurfaceControl->setMatrix(M_SQRT1_2 * 8, M_SQRT1_2 * 8,
++            -M_SQRT1_2 * 8, M_SQRT1_2 * 8));
+     SurfaceComposerClient::closeGlobalTransaction(true);
+     {
+         SCOPED_TRACE("after setMatrix");
+@@ -479,7 +479,7 @@
+     SurfaceComposerClient::closeGlobalTransaction(true);
+ 
+     SurfaceComposerClient::openGlobalTransaction();
+-    ASSERT_EQ(NO_ERROR, mFGSurfaceControl->setPosition(128,128));
++    ASSERT_EQ(NO_ERROR, mFGSurfaceControl->setPosition(408,408));
+     mFGSurfaceControl->deferTransactionUntil(mSyncSurfaceControl->getHandle(),
+             mSyncSurfaceControl->getSurface()->getNextFrameNumber() + 1);
+     SurfaceComposerClient::closeGlobalTransaction(true);
+Index: system/core/libpixelflinger/codeflinger/CodeCache.cpp
+===================================================================
+--- system/core/libpixelflinger/codeflinger/CodeCache.cpp	(revision 10775)
++++ system/core/libpixelflinger/codeflinger/CodeCache.cpp	(working copy)
+@@ -26,6 +26,8 @@
+ #include <cutils/atomic.h>
+ #define LOG_TAG "CodeCache"
+ #include <cutils/log.h>
++#include <sys/fcntl.h>
++#include <string.h> 
+ 
+ 
+ #include "CodeCache.h"
+@@ -75,6 +77,9 @@
+ // ----------------------------------------------------------------------------
+ 
+ static void* gExecutableStore = NULL;
++//charlesvincent Disable_HWUI_GPU_HWC
++static void* gExecutableStore_copy = NULL;
++
+ static mspace gMspace = NULL;
+ const size_t kMaxCodeCacheCapacity = 1024 * 1024;
+ 
+@@ -86,16 +91,19 @@
+         LOG_ALWAYS_FATAL_IF(fd < 0,
+                             "Creating code cache, ashmem_create_region "
+                             "failed with error '%s'", strerror(errno));
++		//charlesvincent Disable_HWUI_GPU_HWC
+         gExecutableStore = mmap(NULL, kMaxCodeCacheCapacity,
+-                                PROT_READ | PROT_WRITE | PROT_EXEC,
++                                /*PROT_READ | PROT_WRITE | PROT_EXEC*/O_RDWR,
+                                 MAP_PRIVATE, fd, 0);
+-        LOG_ALWAYS_FATAL_IF(gExecutableStore == MAP_FAILED,
+-                            "Creating code cache, mmap failed with error "
+-                            "'%s'", strerror(errno));
+-        close(fd);
++		memcpy(gExecutableStore_copy, gExecutableStore, kMaxCodeCacheCapacity);
++        //LOG_ALWAYS_FATAL_IF(gExecutableStore == MAP_FAILED,
++        //                    "Creating code cache, mmap failed with error "
++        //                   "'%s'", strerror(errno));
++        
+         gMspace = create_mspace_with_base(gExecutableStore, kMaxCodeCacheCapacity,
+                                           /*locked=*/ false);
+         mspace_set_footprint_limit(gMspace, kMaxCodeCacheCapacity);
++		close(fd);
+     }
+     return gMspace;
+ }
